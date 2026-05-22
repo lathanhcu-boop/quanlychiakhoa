@@ -90,18 +90,28 @@
         </div>
     </div>
 
-    <script>
-        // Khởi tạo dữ liệu từ LocalStorage
-        let keys = JSON.parse(localStorage.getItem('keys')) || [];
-        let history = JSON.parse(localStorage.getItem('history')) || [];
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-        // Hàm lưu dữ liệu
-        function saveData() {
-            localStorage.setItem('keys', JSON.stringify(keys));
-            localStorage.setItem('history', JSON.stringify(history));
-            renderData();
-        }
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDTZ8z6ptj_hsYtMCdqyQqZ_5Tnz8F7QhI",
+  authDomain: "quan-ly-chia-khoa.firebaseapp.com",
+  databaseURL: "https://quan-ly-chia-khoa-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "quan-ly-chia-khoa",
+  storageBucket: "quan-ly-chia-khoa.firebasestorage.app",
+  messagingSenderId: "24787727417",
+  appId: "1:24787727417:web:bfb509b0a614fa183589e8",
+  measurementId: "G-6LL47GBKKJ"
+};
 
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
         // Hàm hiển thị thông báo
         function showAlert(msg, type) {
             const alertBox = document.getElementById('alertBox');
