@@ -40,13 +40,16 @@
                 <div class="card-body">
                     <div class="mb-3">
                         <label class="form-label">Mã chìa khóa</label>
-                        <input type="text" id="actionKeyId" class="form-control" placeholder="Nhập mã cần mượn/trả">
+                        <input type="text" id="actionKeyId" class="form-control" placeholder="Nhập mã cần thao tác">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Tên người mượn (Bỏ trống nếu là Trả)</label>
-                        <input type="text" id="actionPerson" class="form-control" placeholder="Nguyễn Văn A">
+                        <label class="form-label">Tên người Mượn / Trả</label>
+                        <input type="text" id="actionPerson" class="form-control" placeholder="Ví dụ: Nguyễn Văn A">
                     </div>
-                    <button class="btn btn-primary w-100 fw-bold" onclick="updateKey()">Xác nhận thao tác</button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-warning w-50 fw-bold" onclick="handleAction('borrow')">Mượn chìa</button>
+                        <button class="btn btn-info w-50 fw-bold text-white" onclick="handleAction('return')">Trả chìa</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,13 +85,13 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Thời gian</th>
-                                <th>Mã</th>
+                                <th>Mã chìa</th>
                                 <th>Hành động</th>
                                 <th>Người thực hiện</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr><td colspan="4" class="text-muted py-3">Chưa có lịch sử.</td></tr>
+                        <tbody id="historyTableBody">
+                            <tr><td colspan="4" class="text-muted py-3">Đang tải lịch sử...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -99,29 +102,29 @@
 
 <script>
     // ===== DÁN LINK SCRIPT MỚI VÀO ĐÂY =====
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzo_YHGVkMVHabd6A8_WgJ6l90kzRTvvFSb-lKqz3egJiHrEJkLALbEbblkyUVFCAudfA/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0NZlNCgttzeEuMjL6YCu_Ab1kOUxHV6hfJG7u7Aeet3AZfXg6Eaf4rTlyUj00tLE4Eg/exec';
 
-    // 1. TẢI DỮ LIỆU
+    // 1. TẢI DỮ LIỆU BẢNG & LỊCH SỬ
     function loadDataFromSheets() {
-        const keysBody = document.getElementById('keysTableBody');
-        keysBody.innerHTML = '<tr><td colspan="4" class="text-muted py-3">Đang đồng bộ từ đám mây...</td></tr>';
+        document.getElementById('keysTableBody').innerHTML = '<tr><td colspan="4" class="text-muted py-3">Đang đồng bộ...</td></tr>';
+        document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="4" class="text-muted py-3">Đang đồng bộ...</td></tr>';
 
         fetch(SCRIPT_URL + '?action=read')
             .then(res => res.json())
-            .then(keys => renderData(keys))
+            .then(data => {
+                renderKeys(data.keys);
+                renderHistory(data.history);
+            })
             .catch(err => {
-                keysBody.innerHTML = '<tr><td colspan="4" class="text-danger py-3">Lỗi tải dữ liệu. Kiểm tra lại link kết nối!</td></tr>';
+                document.getElementById('keysTableBody').innerHTML = '<tr><td colspan="4" class="text-danger py-3">Lỗi tải dữ liệu!</td></tr>';
             });
     }
 
-    // HIỂN THỊ LÊN BẢNG
-    function renderData(keys) {
+    // Vẽ bảng chìa khóa
+    function renderKeys(keys) {
         const keysBody = document.getElementById('keysTableBody');
         keysBody.innerHTML = '';
-        if (keys.length === 0) {
-            keysBody.innerHTML = '<tr><td colspan="4" class="text-muted py-3">Chưa có dữ liệu chìa khóa.</td></tr>';
-            return;
-        }
+        if (keys.length === 0) return keysBody.innerHTML = '<tr><td colspan="4" class="text-muted py-3">Chưa có dữ liệu chìa khóa.</td></tr>';
 
         keys.forEach(k => {
             const isAvailable = (k.trang_thai === 'Có sẵn' || k.trang_thai === '');
@@ -139,14 +142,33 @@
         });
     }
 
+    // Vẽ bảng lịch sử
+    function renderHistory(history) {
+        const histBody = document.getElementById('historyTableBody');
+        histBody.innerHTML = '';
+        if (history.length === 0) return histBody.innerHTML = '<tr><td colspan="4" class="text-muted py-3">Chưa có lịch sử.</td></tr>';
+
+        history.forEach(h => {
+            const actionBadge = h.hanh_dong === 'Mượn chìa' 
+                ? '<span class="text-danger fw-bold">Mượn</span>' 
+                : '<span class="text-success fw-bold">Trả</span>';
+
+            histBody.innerHTML += `
+                <tr>
+                    <td>${h.thoi_gian}</td>
+                    <td><strong>${h.ma_chia}</strong></td>
+                    <td>${actionBadge}</td>
+                    <td>${h.nguoi_thuc_hien}</td>
+                </tr>`;
+        });
+    }
+
     // 2. THÊM CHÌA KHÓA
     function addKey() {
         const id = document.getElementById('newKeyId').value.trim();
         const room = document.getElementById('newKeyRoom').value.trim();
         
         if (!id || !room) return alert("Vui lòng nhập đầy đủ mã và tên phòng!");
-        
-        // Hiện thông báo đang xử lý
         document.getElementById('newKeyId').value = "Đang lưu...";
         
         const url = `${SCRIPT_URL}?action=add&ma_chia=${encodeURIComponent(id)}&ten_phong=${encodeURIComponent(room)}`;
@@ -155,32 +177,38 @@
             .then(data => {
                 document.getElementById('newKeyId').value = "";
                 document.getElementById('newKeyRoom').value = "";
-                loadDataFromSheets(); // Tải lại bảng sau khi thêm
+                loadDataFromSheets();
                 alert("Thêm thành công!");
             });
     }
 
-    // 3. MƯỢN / TRẢ CHÌA KHÓA
-    function updateKey() {
+    // 3. XỬ LÝ NÚT MƯỢN / TRẢ
+    function handleAction(actionType) {
         const id = document.getElementById('actionKeyId').value.trim();
-        const person = document.getElementById('actionPerson').value.trim(); // Bỏ trống = Trả
+        const person = document.getElementById('actionPerson').value.trim();
         
-        if (!id) return alert("Vui lòng nhập mã chìa khóa cần thao tác!");
+        if (!id) return alert("Vui lòng nhập mã chìa khóa!");
+        if (actionType === 'borrow' && !person) return alert("Vui lòng nhập tên người mượn!");
         
         document.getElementById('actionKeyId').value = "Đang xử lý...";
 
-        const url = `${SCRIPT_URL}?action=update&ma_chia=${encodeURIComponent(id)}&nguoi_muon=${encodeURIComponent(person)}`;
+        const url = `${SCRIPT_URL}?action=${actionType}&ma_chia=${encodeURIComponent(id)}&nguoi_muon=${encodeURIComponent(person)}`;
         fetch(url)
             .then(res => res.json())
             .then(data => {
-                document.getElementById('actionKeyId').value = "";
-                document.getElementById('actionPerson').value = "";
-                loadDataFromSheets(); // Tải lại bảng
-                alert("Thao tác thành công!");
+                if (data.status === "error") {
+                    document.getElementById('actionKeyId').value = id; // Trả lại text cũ
+                    alert("Lỗi: " + data.message);
+                } else {
+                    document.getElementById('actionKeyId').value = "";
+                    document.getElementById('actionPerson').value = "";
+                    loadDataFromSheets(); 
+                    alert("Thao tác thành công!");
+                }
             });
     }
 
-    // Tự động chạy khi mở web
+    // Chạy khi mở web
     window.onload = loadDataFromSheets;
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
