@@ -137,12 +137,11 @@
 </div>
 
 <script>
-    // ===== DÁN LINK SCRIPT CỦA BẠN VÀO ĐÂY =====
+    // ===== DÁN LINK SCRIPT MỚI CỦA BẠN VÀO ĐÂY SAU KHI ĐÃ SET QUYỀN "ANYONE" =====
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw0NZlNCgttzeEuMjL6YCu_Ab1kOUxHV6hfJG7u7Aeet3AZfXg6Eaf4rTlyUj00tLE4Eg/exec';
 
     let allKeysData = []; 
 
-    // 1. TẢI DỮ LIỆU
     function loadDataFromSheets() {
         document.getElementById('keysTableBody').innerHTML = '<tr><td colspan="4" class="text-muted py-4 fs-5">Đang đồng bộ...</td></tr>';
         
@@ -155,7 +154,8 @@
                 document.getElementById('searchInput').value = ''; 
             })
             .catch(err => {
-                document.getElementById('keysTableBody').innerHTML = '<tr><td colspan="4" class="text-danger py-4">Lỗi tải dữ liệu!</td></tr>';
+                console.error("Lỗi Fetch:", err);
+                document.getElementById('keysTableBody').innerHTML = '<tr><td colspan="4" class="text-danger py-4">Lỗi kết nối. Hãy kiểm tra lại cấu hình phân quyền Apps Script!</td></tr>';
             });
     }
 
@@ -186,7 +186,7 @@
             return k.ma_chia.toLowerCase().includes(keyword) ||
                    k.ten_phong.toLowerCase().includes(keyword) ||
                    k.trang_thai.toLowerCase().includes(keyword) ||
-                   k.nguoi_muon.toLowerCase().includes(keyword);
+                   (k.nguoi_muon && k.nguoi_muon.toLowerCase().includes(keyword));
         });
         renderKeys(filteredKeys);
     }
@@ -211,6 +211,68 @@
         });
     }
 
-    // 2. THÊM CHÌA KHÓA
+    // 2. THÊM CHÌA KHÓA (Phần code đã được hoàn thiện)
     function addKey() {
-        const id
+        const id = document.getElementById('newKeyId').value.trim();
+        const room = document.getElementById('newKeyRoom').value.trim();
+        
+        if (!id || !room) return alert("Vui lòng nhập đầy đủ mã và tên phòng!");
+        
+        const btn = document.querySelector('#addKeyModal .btn-success');
+        const originalText = btn.innerText;
+        btn.innerText = "Đang xử lý...";
+        btn.disabled = true;
+        
+        const url = `${SCRIPT_URL}?action=add&ma_chia=${encodeURIComponent(id)}&ten_phong=${encodeURIComponent(room)}`;
+        
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('newKeyId').value = "";
+                document.getElementById('newKeyRoom').value = "";
+                
+                // Ẩn modal
+                const modalEl = document.getElementById('addKeyModal');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if(modalInstance) modalInstance.hide();
+                
+                alert("Thêm thành công!");
+                loadDataFromSheets();
+            })
+            .catch(err => alert("Lỗi khi thêm chìa khóa!"))
+            .finally(() => {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            });
+    }
+
+    // 3. XỬ LÝ MƯỢN TRẢ
+    function handleAction(actionType) {
+        const id = document.getElementById('actionKeyId').value.trim();
+        const person = document.getElementById('actionPerson').value.trim();
+        
+        if (!id) return alert("Vui lòng nhập mã chìa khóa!");
+        if (actionType === 'borrow' && !person) return alert("Vui lòng nhập tên người mượn!");
+        
+        const url = `${SCRIPT_URL}?action=${actionType}&ma_chia=${encodeURIComponent(id)}&nguoi_muon=${encodeURIComponent(person)}`;
+        
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "error") {
+                    alert("Lỗi: " + data.message);
+                } else {
+                    document.getElementById('actionKeyId').value = "";
+                    document.getElementById('actionPerson').value = "";
+                    alert("Thao tác thành công!");
+                    loadDataFromSheets(); 
+                }
+            })
+            .catch(err => alert("Có lỗi xảy ra khi thực hiện thao tác!"));
+    }
+
+    window.onload = loadDataFromSheets;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
