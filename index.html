@@ -3,66 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Chìa Khóa V2</title>
+    <title>Quản Lý Chìa Khóa V2 - Google Sheets</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; padding-top: 30px; }
         .card { box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
         .card-header { font-weight: bold; color: white; }
-        .bg-green { background-color: #198754; }
-        .bg-blue { background-color: #0d6efd; }
         .bg-dark-custom { background-color: #212529; }
-        .bg-gray { background-color: #6c757d; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 class="text-center mb-4 text-primary">🔑 QUẢN LÝ CHÌA KHÓA</h2>
+    <h2 class="text-center mb-4 text-primary">🔑 QUẢN LÝ CHÌA KHÓA (DỮ LIỆU GOOGLE SHEETS)</h2>
     
-    <div id="alertBox"></div>
+    <div class="text-end mb-3">
+        <button class="btn btn-primary fw-bold" onclick="loadDataFromSheets()">🔄 Tải lại dữ liệu</button>
+    </div>
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header bg-green">Thêm Chìa Khóa Mới</div>
-                <div class="card-body">
-                    <form id="addForm" onsubmit="event.preventDefault();">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Mã chìa khóa</label>
-                            <input type="text" id="addMaChia" class="form-control" placeholder="Ví dụ: C101" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Tên phòng / Vị trí</label>
-                            <input type="text" id="addTenPhong" class="form-control" placeholder="Ví dụ: Phòng Y tế" required>
-                        </div>
-                        <button type="submit" class="btn btn-success w-100 fw-bold">Thêm vào hệ thống</button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header bg-blue">Thao tác Mượn / Trả</div>
-                <div class="card-body">
-                    <form id="borrowReturnForm" onsubmit="event.preventDefault();">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Mã chìa khóa</label>
-                            <input type="text" id="actionMaChia" class="form-control" placeholder="Nhập mã cần mượn/trả" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Tên người mượn <span class="text-muted small">(Bỏ trống nếu là Trả)</span></label>
-                            <input type="text" id="actionNguoiMuon" class="form-control" placeholder="Nguyễn Văn A">
-                        </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" onclick="handleAction('borrow')" class="btn btn-warning flex-fill fw-bold text-white">Cho Mượn ↗</button>
-                            <button type="button" onclick="handleAction('return')" class="btn btn-info flex-fill fw-bold text-white">Nhận Trả ↙</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-8">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
             <div class="card">
                 <div class="card-header bg-dark-custom">Danh Sách Tủ Khóa</div>
                 <div class="table-responsive">
@@ -76,26 +36,7 @@
                             </tr>
                         </thead>
                         <tbody id="keysTableBody">
-                            <tr><td colspan="4" class="text-muted py-3">Đang tải kết nối đám mây...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header bg-gray">Nhật Ký Mượn / Trả Gần Đây</div>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0 text-center align-middle">
-                        <thead class="table-secondary">
-                            <tr>
-                                <th>Thời gian</th>
-                                <th>Mã</th>
-                                <th>Hành động</th>
-                                <th>Người thực hiện</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTableBody">
-                            <tr><td colspan="4" class="text-muted py-2">Chưa có lịch sử.</td></tr>
+                            <tr><td colspan="4" class="text-muted py-3">Đang tải dữ liệu từ Google Sheets...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -104,146 +45,55 @@
     </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-
 <script>
-    // Cấu hình thông số Firebase cá nhân từ tài khoản của bạn
-    const firebaseConfig = {
-        apiKey: "AIzaSyDTZ8z6ptj_hsYtMCdqYQqZ_5Tnz8F7QhI",
-        authDomain: "quan-ly-chia-khoa.firebaseapp.com",
-        databaseURL: "https://quan-ly-chia-khoa-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "quan-ly-chia-khoa",
-        storageBucket: "quan-ly-chia-khoa.firebasestorage.app",
-        messagingSenderId: "24787727417",
-        appId: "1:24787727417:web:bfb599b2a14fa183589e8"
-    };
+    // DÁN ĐOẠN URL WEB APP BẠN COPY Ở BƯỚC 2 VÀO GIỮA HAI DẤU NHÁY ĐƠN DƯỚI ĐÂY
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxNFAC7N2yZkB_f2PVPESXfrdWEih4oqcx18ujwer3pwCCcUwTAhTSUA6zT1Atb5ryh/exec';
 
-    // Khởi tạo ứng dụng
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // Lắng nghe liên tục sự thay đổi dữ liệu từ cơ sở dữ liệu đám mây
-    db.ref('/').on('value', (snapshot) => {
-        const data = snapshot.val() || {};
-        const keys = data.keys || [];
-        const history = data.history || [];
-        renderData(keys, history);
-    });
-
-    function showAlert(msg, type) {
-        const alertBox = document.getElementById('alertBox');
-        if (alertBox) {
-            alertBox.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
-        }
-    }
-
-    function getCurrentTime() {
-        const now = new Date();
-        return now.toLocaleString('vi-VN');
-    }
-
-    // Xử lý sự kiện gửi mẫu Thêm chìa
-    document.getElementById('addForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const maChia = document.getElementById('addMaChia').value.trim().toUpperCase();
-        const tenPhong = document.getElementById('addTenPhong').value.trim();
-
-        db.ref('keys').once('value', (snapshot) => {
-            let keys = snapshot.val() || [];
-            if (keys.find(k => k.ma_chia === maChia)) {
-                showAlert(`Mã chìa ${maChia} đã tồn tại trong tủ!`, 'danger');
-                return;
-            }
-
-            keys.push({ ma_chia: maChia, ten_phong: tenPhong, trang_thai: 'Có sẵn', nguoi_muon: '' });
-            db.ref('keys').set(keys).then(() => {
-                showAlert(`Đã thêm thành công chìa khóa ${maChia}!`, 'success');
-                document.getElementById('addForm').reset();
-            }).catch(error => {
-                showAlert(`Lỗi khi lưu dữ liệu: ${error.message}`, 'danger');
-            });
-        });
-    });
-
-    // Xử lý sự kiện Mượn / Trả
-    function handleAction(actionType) {
-        const maChia = document.getElementById('actionMaChia').value.trim().toUpperCase();
-        const nguoiMuon = document.getElementById('actionNguoiMuon').value.trim();
-
-        db.ref('/').once('value', (snapshot) => {
-            const data = snapshot.val() || {};
-            let keys = data.keys || [];
-            let history = data.history || [];
-            
-            const keyIndex = keys.findIndex(k => k.ma_chia === maChia);
-            if (keyIndex === -1) {
-                showAlert(`Lỗi: Không tìm thấy mã chìa ${maChia} trong hệ thống!`, 'danger');
-                return;
-            }
-
-            let key = keys[keyIndex];
-
-            if (actionType === 'borrow') {
-                if (key.trang_thai === 'Đã cho mượn') {
-                    showAlert(`Chìa khóa ${maChia} đang được giữ bởi ${key.nguoi_muon}!`, 'warning');
-                } else if (!nguoiMuon) {
-                    showAlert('Vui lòng điền tên người mượn chìa khóa!', 'danger');
-                } else {
-                    key.trang_thai = 'Đã cho mượn';
-                    key.nguoi_muon = nguoiMuon;
-                    history.unshift({ thoi_gian: getCurrentTime(), ma_chia: maChia, hanh_dong: 'Mượn', nguoi_thuc_hien: nguoiMuon });
-                    
-                    db.ref('/').set({ keys, history }); 
-                    showAlert(`Đã ghi nhận mượn chìa ${maChia} cho ${nguoiMuon}.`, 'success');
-                    document.getElementById('borrowReturnForm').reset();
-                }
-            } else if (actionType === 'return') {
-                if (key.trang_thai === 'Có sẵn') {
-                    showAlert(`Chìa khóa ${maChia} đã sẵn sàng trong tủ, không cần trả!`, 'warning');
-                } else {
-                    const nguoiDangMuon = key.nguoi_muon;
-                    key.trang_thai = 'Có sẵn';
-                    key.nguoi_muon = '';
-                    history.unshift({ thoi_gian: getCurrentTime(), ma_chia: maChia, hanh_dong: 'Trả', nguoi_thuc_hien: nguoiDangMuon });
-                    
-                    db.ref('/').set({ keys, history }); 
-                    showAlert(`Đã nhận lại chìa khóa ${maChia} thành công.`, 'success');
-                    document.getElementById('borrowReturnForm').reset();
-                }
-            }
-        });
-    }
-
-    // Đổ dữ liệu lên cấu trúc HTML
-    function renderData(keys, history) {
+    // Hàm gọi dữ liệu từ Google Sheets
+    function loadDataFromSheets() {
         const keysBody = document.getElementById('keysTableBody');
-        if (keysBody) {
-            keysBody.innerHTML = '';
-            if (keys.length === 0) {
-                keysBody.innerHTML = '<tr><td colspan="4" class="text-muted py-3">Chưa có dữ liệu chìa khóa nào.</td></tr>';
-            } else {
-                keys.forEach(k => {
-                    const badge = k.trang_thai === 'Có sẵn' ? '<span class="badge bg-success">Có sẵn trong tủ</span>' : '<span class="badge bg-danger">Đã cho mượn</span>';
-                    keysBody.innerHTML += `<tr><td><strong>${k.ma_chia}</strong></td><td>${k.ten_phong}</td><td>${badge}</td><td>${k.nguoi_muon || '-'}</td></tr>`;
-                });
-            }
+        keysBody.innerHTML = '<tr><td colspan="4" class="text-muted py-3">Đang tải dữ liệu từ đám mây...</td></tr>';
+
+        fetch(SCRIPT_URL)
+            .then(response => response.json())
+            .then(keys => {
+                renderData(keys);
+            })
+            .catch(error => {
+                console.error('Lỗi:', error);
+                keysBody.innerHTML = '<tr><td colspan="4" class="text-danger py-3">Lỗi kết nối tệp Sheets. Hãy kiểm tra lại link cấu hình!</td></tr>';
+            });
+    }
+
+    // Đổ dữ liệu lên bảng HTML
+    function renderData(keys) {
+        const keysBody = document.getElementById('keysTableBody');
+        if (!keysBody) return;
+        
+        keysBody.innerHTML = '';
+        if (keys.length === 0) {
+            keysBody.innerHTML = '<tr><td colspan="4" class="text-muted py-3">Chưa có dữ liệu chìa khóa nào trong tệp Sheets.</td></tr>';
+            return;
         }
 
-        const historyBody = document.getElementById('historyTableBody');
-        if (historyBody) {
-            historyBody.innerHTML = '';
-            const recentHistory = history.slice(0, 10);
-            if (recentHistory.length === 0) {
-                historyBody.innerHTML = '<tr><td colspan="4" class="text-muted py-2">Chưa ghi nhận nhật ký thao tác.</td></tr>';
-            } else {
-                recentHistory.forEach(h => {
-                    const actionHtml = h.hanh_dong === 'Mượn' ? '<span class="text-warning fw-bold">Mượn ↗</span>' : '<span class="text-info fw-bold">Trả ↙</span>';
-                    historyBody.innerHTML += `<tr><td class="text-muted"><small>${h.thoi_gian}</small></td><td><strong>${h.ma_chia}</strong></td><td>${actionHtml}</td><td>${h.nguoi_thuc_hien}</td></tr>`;
-                });
-            }
-        }
+        keys.forEach(k => {
+            const trangThaiText = k.trang_thai ? k.trang_thai.trim() : 'Có sẵn';
+            const badge = trangThaiText === 'Có sẵn' 
+                ? '<span class="badge bg-success">Có sẵn trong tủ</span>' 
+                : '<span class="badge bg-danger">Đã cho mượn</span>';
+            
+            keysBody.innerHTML += `
+                <tr>
+                    <td><strong>${k.ma_chia}</strong></td>
+                    <td>${k.ten_phong}</td>
+                    <td>${badge}</td>
+                    <td>${k.nguoi_muon || '-'}</td>
+                </tr>`;
+        });
     }
+
+    // Tự động chạy tải dữ liệu ngay khi vừa mở trang web
+    window.onload = loadDataFromSheets;
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
