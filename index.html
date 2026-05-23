@@ -27,7 +27,7 @@
             <div class="card">
                 <div class="card-header bg-green">Thêm Chìa Khóa Mới</div>
                 <div class="card-body">
-                    <form id="addForm">
+                    <form id="addForm" onsubmit="event.preventDefault();">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Mã chìa khóa</label>
                             <input type="text" id="addMaChia" class="form-control" placeholder="Ví dụ: C101" required>
@@ -157,9 +157,12 @@
             }
 
             keys.push({ ma_chia: maChia, ten_phong: tenPhong, trang_thai: 'Có sẵn', nguoi_muon: '' });
-            db.ref('keys').set(keys); 
-            showAlert(`Đã thêm thành công chìa khóa ${maChia}!`, 'success');
-            document.getElementById('addForm').reset();
+            db.ref('keys').set(keys).then(() => {
+                showAlert(`Đã thêm thành công chìa khóa ${maChia}!`, 'success');
+                document.getElementById('addForm').reset();
+            }).catch(error => {
+                showAlert(`Lỗi khi lưu dữ liệu: ${error.message}`, 'danger');
+            });
         });
     });
 
@@ -236,4 +239,12 @@
             } else {
                 recentHistory.forEach(h => {
                     const actionHtml = h.hanh_dong === 'Mượn' ? '<span class="text-warning fw-bold">Mượn ↗</span>' : '<span class="text-info fw-bold">Trả ↙</span>';
-                    historyBody.innerHTML += `<tr><td class="text-muted"><small>${h.thoi_gian}</small></td><td><strong>${h.ma_chia}</strong></td><td>${actionHtml
+                    historyBody.innerHTML += `<tr><td class="text-muted"><small>${h.thoi_gian}</small></td><td><strong>${h.ma_chia}</strong></td><td>${actionHtml}</td><td>${h.nguoi_thuc_hien}</td></tr>`;
+                });
+            }
+        }
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
