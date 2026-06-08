@@ -165,10 +165,17 @@
         if (keys.length === 0) return keysBody.innerHTML = '<tr><td colspan="4" class="text-muted py-4">Không tìm thấy chìa khóa nào.</td></tr>';
 
         keys.forEach(k => {
-            const isAvailable = (k.trang_thai === 'Có sẵn' || k.trang_thai === '');
-            const badge = isAvailable 
-                ? '<span class="badge bg-success">Có sẵn trong tủ</span>' 
-                : '<span class="badge bg-danger">Đã cho mượn</span>';
+            // CẢI TIẾN: Phân tách rõ ràng 3 trạng thái (Có sẵn, Không có, Đã cho mượn)
+            let badge = '';
+            const statusText = k.trang_thai ? k.trang_thai.trim() : '';
+
+            if (statusText === 'Có sẵn' || statusText === '') {
+                badge = '<span class="badge bg-success">Có sẵn trong tủ</span>';
+            } else if (statusText === 'Không có') {
+                badge = '<span class="badge bg-secondary">Không có / Đang trống</span>';
+            } else {
+                badge = '<span class="badge bg-danger">Đã cho mượn</span>';
+            }
             
             keysBody.innerHTML += `
                 <tr>
@@ -211,7 +218,6 @@
         });
     }
 
-    // 2. THÊM CHÌA KHÓA (Phần code đã được hoàn thiện)
     function addKey() {
         const id = document.getElementById('newKeyId').value.trim();
         const room = document.getElementById('newKeyRoom').value.trim();
@@ -223,6 +229,7 @@
         btn.innerText = "Đang xử lý...";
         btn.disabled = true;
         
+        // Mặc định không truyền tham số trang_thai lên URL, Apps Script nhận diện rỗng và tự động lưu "Không có"
         const url = `${SCRIPT_URL}?action=add&ma_chia=${encodeURIComponent(id)}&ten_phong=${encodeURIComponent(room)}`;
         
         fetch(url)
@@ -231,7 +238,6 @@
                 document.getElementById('newKeyId').value = "";
                 document.getElementById('newKeyRoom').value = "";
                 
-                // Ẩn modal
                 const modalEl = document.getElementById('addKeyModal');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
                 if(modalInstance) modalInstance.hide();
@@ -246,7 +252,6 @@
             });
     }
 
-    // 3. XỬ LÝ MƯỢN TRẢ
     function handleAction(actionType) {
         const id = document.getElementById('actionKeyId').value.trim();
         const person = document.getElementById('actionPerson').value.trim();
